@@ -13,6 +13,9 @@ const allowedOrigins = [
     'http://localhost:3000',        //Alternative port React development
     'http://localhost:5000',       //Backend server port
     'http://localhost:5173',       //Vite development server port
+    'http://localhost:19006',    //Expo development server port
+
+
     process.env.CLIENT_URL         //Production client URL  
 ].filter(Boolean);                  // Filter out any undefined value
 
