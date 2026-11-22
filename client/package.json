@@ -1,13 +1,16 @@
 {
   "name": "car-garage-app",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
+  "description": "",
   "type": "module",
+  "main": "eslint.config.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "app.js"
   },
   "dependencies": {
     "cors": "^2.8.6",
