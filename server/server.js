@@ -15,21 +15,21 @@ const allowedOrigins = [
     "http://localhost:5000",   // Backend server
     "http://localhost:5173",   // Vite dev server
     "http://localhost:19006",  // Expo dev server
-    "https://car-garage-app-jgbz-do1rc0lem-xdravynx.vercel.app", // Production client URL
-    process.env.CLIENT_URL     // Additional client URL from env
+    process.env.CLIENT_URL,    // Production / configured client URL
 ].filter(Boolean);
 
 const corsOptions = {
     origin: (origin, callback) => {
+        // Allow non-browser requests (curl, Postman, server-to-server)
         if (!origin) {
             return callback(null, true);
         }
 
-        if (allowedOrigins.includes(origin) || !isProduction) {
+        if (!isProduction || allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
 
-        const corsError = new Error("Not allowed by CORS");
+        const corsError = new Error(`Origin not allowed by CORS: ${origin}`);
         corsError.statusCode = 403;
         return callback(corsError);
     },
@@ -39,32 +39,12 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 // 2. Body parsers
 app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
-// 3. MongoDB connection
-const mongoURI = process.env.MONGO_URI || (!isProduction ? "mongodb://localhost:27017/car-garage" : null);
-
-if (!mongoURI) {
-    console.error("MONGO_URI is required when NODE_ENV=production.");
-    process.exit(1);
-}
-
-mongoose.set("strictQuery", true);
-
-mongoose.connect(mongoURI)
-    .then(() => {
-        console.log("Connected to MongoDB");
-    })
-    .catch((err) => {
-        console.error("Error connecting to MongoDB:", err);
-        process.exit(1);
-    });
-
-// 4. Routes & health check
+// 3. Routes & health check
 app.use("/api/cars", carRoutes);
 
 app.get("/health", (req, res) => {
@@ -76,22 +56,76 @@ app.get("/health", (req, res) => {
     });
 });
 
-// 5. 404 handler (must come after all routes)
+// 4. 404 handler (must come after all routes)
 app.use((req, res) => {
     res.status(404).json({ error: "Not Found" });
 });
 
-// 6. Global error handler (must have 4 arguments)
+// 5. Global error handler (must have 4 arguments)
 app.use((err, req, res, next) => {
-    console.error(err.stack || err);
     const statusCode = err.statusCode || err.status || 500;
+    if (statusCode >= 500 || !isProduction) {
+        console.error(err.stack || err);
+    }
+
     res.status(statusCode).json({
-        error: isProduction && statusCode === 500 ? "Internal Server Error" : (err.message || "Internal Server Error"),
+        error:
+            isProduction && statusCode >= 500
+                ? "Internal Server Error"
+                : err.message || "Internal Server Error",
         ...(isProduction ? {} : { stack: err.stack }),
     });
 });
 
-// 7. Start server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+// 6. Connect to MongoDB, then start server
+const mongoURI =
+    process.env.MONGO_URI ||
+    (!isProduction ? "mongodb://localhost:27017/car-garage" : null);
+
+if (!mongoURI) {
+    console.error("MONGO_URI is required when NODE_ENV=production.");
+    process.exit(1);
+}
+
+mongoose.set("strictQuery", true);
+
+mongoose.connection.on("disconnected", () => {
+    console.warn("MongoDB disconnected");
 });
+
+let server;
+
+async function startServer() {
+    try {
+        await mongoose.connect(mongoURI);
+        console.log("Connected to MongoDB");
+
+        server = app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT} (${process.env.NODE_ENV || "development"})`);
+        });
+    } catch (err) {
+        console.error("Error connecting to MongoDB:", err);
+        process.exit(1);
+    }
+}
+
+async function shutdown(signal) {
+    console.log(`${signal} received. Shutting down gracefully...`);
+    try {
+        if (server) {
+            await new Promise((resolve, reject) => {
+                server.close((err) => (err ? reject(err) : resolve()));
+            });
+        }
+        await mongoose.connection.close(false);
+        process.exit(0);
+    } catch (err) {
+        console.error("Error during shutdown:", err);
+        process.exit(1);
+    }
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+startServer();
