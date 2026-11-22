@@ -16,15 +16,19 @@ const allowedOrigins = [
     "http://localhost:5173",   // Vite dev server
     "http://localhost:19006",  // Expo dev server
     "https://car-garage-app-jgbz-do1rc0lem-xdravynx.vercel.app", // Production client URL
-    process.env.CLIENT_URL     // Production client URL
+    process.env.CLIENT_URL     // Additional client URL from env
 ].filter(Boolean);
 
 const corsOptions = {
     origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
+        if (!origin) {
+            return callback(null, true);
+        }
+
         if (allowedOrigins.includes(origin) || !isProduction) {
             return callback(null, true);
         }
+
         const corsError = new Error("Not allowed by CORS");
         corsError.statusCode = 403;
         return callback(corsError);
