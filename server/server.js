@@ -15,7 +15,7 @@ const allowedOrigins = [
     "http://localhost:5000",   // Backend server
     "http://localhost:5173",   // Vite dev server
     "http://localhost:19006",  // Expo dev server
-    "car-garage-app-jgbz.vercel.app", // Production client URL
+    "https://car-garage-app-jgbz-do1rc0lem-xdravynx.vercel.app", // Production client URL
     process.env.CLIENT_URL     // Production client URL
 ].filter(Boolean);
 
