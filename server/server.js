@@ -19,25 +19,23 @@ const allowedOrigins = [
     process.env.CLIENT_URL     // Production client URL
 ].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
     origin: (origin, callback) => {
-        // Allow non-browser requests (curl, mobile apps, server-to-server)
-        if (!origin) {
-            return callback(null, true);
-        }
-
+        if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin) || !isProduction) {
             return callback(null, true);
         }
-
         const corsError = new Error("Not allowed by CORS");
         corsError.statusCode = 403;
         return callback(corsError);
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-}));
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // 2. Body parsers
 app.use(express.json({ limit: "1mb" }));
