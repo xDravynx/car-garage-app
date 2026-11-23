@@ -6,7 +6,7 @@ require("dotenv").config();
 const carRoutes = require("./routes/cars");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000 || 10000;
 const isProduction = process.env.NODE_ENV === "production";
 
 // 1. CORS configuration
