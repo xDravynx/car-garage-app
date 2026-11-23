@@ -15,6 +15,7 @@ const allowedOrigins = [
     "http://localhost:5000",   // Backend server
     "http://localhost:5173",   // Vite dev server
     "http://localhost:19006",  // Expo dev server
+    "https://car-garage-app-im92.onrender.com", // Production URL
     process.env.CLIENT_URL,    // Production / configured client URL
 ].filter(Boolean);
 
